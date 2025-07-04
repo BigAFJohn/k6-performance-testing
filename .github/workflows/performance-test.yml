@@ -52,8 +52,8 @@ jobs:
       - name: Debug - List files in workspace
         run: ls -la
 
-      - name: Debug - List files in /app before running
-        run: docker compose run --rm k6_runner ls -la /app
+      - name: Debug - List files in /app using Alpine (fixes K6 ENTRYPOINT issue)
+        run: docker run --rm -v $PWD:/app alpine ls -la /app
 
       - name: Bring up services and run k6 test
         run: docker compose up --build --exit-code-from k6_runner
