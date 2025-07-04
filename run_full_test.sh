@@ -25,6 +25,6 @@ if ! command -v k6 >/dev/null 2>&1; then
 fi
 
 echo "Running k6 test with JSON output..."
-k6 run --out json=k6_results.json test.js
+k6 run --out json=k6_results.json /app/test.js
 
 echo "--- All steps completed successfully! ---"
