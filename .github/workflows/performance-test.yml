@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Node.js dependencies for prepareUsers.js
+      - name: Install Node.js dependencies
         run: npm install
 
       - name: Install dotenv-cli globally
@@ -38,14 +38,14 @@ jobs:
           echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
           echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
 
-      - name: List files for debug
-        run: ls -la
-
-      - name: Validate Docker Compose config
-        run: docker compose config
-
       - name: Check Docker Compose version
         run: docker compose version
+
+      - name: Debug: List files in workspace
+        run: ls -la
+
+      - name: Debug: List files in /app before running
+        run: docker compose run --rm k6_runner ls -la /app
 
       - name: Bring up services and run k6 test
         run: docker compose up --build --exit-code-from k6_runner

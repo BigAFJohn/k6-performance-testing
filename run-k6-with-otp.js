@@ -26,7 +26,7 @@ if (!BASE_URL || !USER_PASSWORD || !DATABASE_HOST || !DATABASE_PORT || !DATABASE
 
 console.log("✅ Environment variables loaded successfully.");
 
-const NUM_USERS_TO_PREPARE = 100; // Adjust this number as needed
+const NUM_USERS_TO_PREPARE = 1; // Adjust this number as needed
 
 async function main() {
   let connection;
