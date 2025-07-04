@@ -1,15 +1,15 @@
-import http from 'k6/http';
-import { check } from 'k6';
-import { logInfo, logError } from '../../utils/logger.js';
-import { randomPrayerDescription } from '../../utils/faker.js'; 
+const http = require('k6/http');
+const { check } = require('k6');
+const { logInfo, logError } = require('../../utils/logger.js');
+const { randomPrayerDescription } = require('../../utils/faker.js');
 
 function generateUniquePrayerTitle() {
   return `Prayer Request ${Date.now()}`;
 }
 
-export function createPrayer(token) {
+function createPrayer(token) {
   const payload = JSON.stringify({
-    title: generateUniquePrayerTitle(), 
+    title: generateUniquePrayerTitle(),
     description: randomPrayerDescription(),
   });
 
@@ -54,3 +54,5 @@ export function createPrayer(token) {
     }
   }
 }
+
+module.exports = { createPrayer };

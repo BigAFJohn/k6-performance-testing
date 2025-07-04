@@ -1,18 +1,16 @@
-import http from 'k6/http';
-import { check } from 'k6';
-import { logInfo, logError } from '../../utils/logger.js';
-import { randomTestimony } from '../../utils/faker.js';
+const http = require('k6/http');
+const { check } = require('k6');
+const { logInfo, logError } = require('../../utils/logger.js');
+const { randomTestimony } = require('../../utils/faker.js');
 
-
-export function createTestimony(token, prayerUuid) {
-  
+function createTestimony(token, prayerUuid) {
   if (!prayerUuid) {
     logError('Testimony creation skipped: prayerUuid is missing.', { prayerUuid: prayerUuid });
-    return null; 
+    return null;
   }
 
   const payload = JSON.stringify({
-    prayer_uuid: prayerUuid, 
+    prayer_uuid: prayerUuid,
     testimony: randomTestimony(),
   });
 
@@ -26,7 +24,7 @@ export function createTestimony(token, prayerUuid) {
   logInfo(`[DEBUG Testimony] Response Status: ${res.status}`);
 
   const success = check(res, {
-    'Testimony submission status is 200': (r) => r.status === 200, 
+    'Testimony submission status is 200': (r) => r.status === 200,
     'Testimony response includes UUID in data': (r) => {
       try {
         const jsonBody = r.json();
@@ -40,7 +38,7 @@ export function createTestimony(token, prayerUuid) {
 
   if (!success) {
     logError('Testimony submission failed', res);
-    return null; 
+    return null;
   } else {
     logInfo('Testimony submitted successfully');
     try {
@@ -57,3 +55,5 @@ export function createTestimony(token, prayerUuid) {
     }
   }
 }
+
+module.exports = { createTestimony };

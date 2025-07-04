@@ -1,11 +1,7 @@
-import mysql from 'mysql2/promise';
-import fs from 'fs';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const mysql = require('mysql2/promise');
+const fs = require('fs');
+const dotenv = require('dotenv');
+const path = require('path');
 
 dotenv.config();
 
@@ -19,14 +15,22 @@ const {
   USER_PASSWORD
 } = process.env;
 
-if (!BASE_URL || !USER_PASSWORD || !DATABASE_HOST || !DATABASE_PORT || !DATABASE_NAME || !DATABASE_USERNAME || !DATABASE_PASSWORD) {
-  console.error("❌ All database and API environment variables must be defined in your .env file.");
+if (
+  !BASE_URL ||
+  !USER_PASSWORD ||
+  !DATABASE_HOST ||
+  !DATABASE_PORT ||
+  !DATABASE_NAME ||
+  !DATABASE_USERNAME ||
+  !DATABASE_PASSWORD
+) {
+  console.error('❌ All database and API environment variables must be defined in your .env file.');
   process.exit(1);
 }
 
-console.log("✅ Environment variables loaded successfully.");
+console.log('✅ Environment variables loaded successfully.');
 
-const NUM_USERS_TO_PREPARE = 1; // Adjust this number as needed
+const NUM_USERS_TO_PREPARE = 1; // Adjust as needed
 
 async function main() {
   let connection;
@@ -51,7 +55,7 @@ async function main() {
         const registerRes = await fetch(`${BASE_URL}/api/v1/user`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password: USER_PASSWORD })
+          body: JSON.stringify({ email, password: USER_PASSWORD }),
         });
         if (!registerRes.ok) throw new Error(`Registration failed: ${await registerRes.text()}`);
         console.log('✅ Registration successful.');
@@ -78,7 +82,7 @@ async function main() {
         const otpVerifyRes = await fetch(`${BASE_URL}/api/v1/user/verify-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, otp })
+          body: JSON.stringify({ email, otp }),
         });
         if (!otpVerifyRes.ok) throw new Error(`OTP verification failed: ${await otpVerifyRes.text()}`);
         console.log('✅ OTP verification successful.');
@@ -90,8 +94,8 @@ async function main() {
           body: JSON.stringify({
             username: email,
             password: USER_PASSWORD,
-            fbmtoken: `fbm_${Date.now()}_${Math.floor(Math.random() * 1000)}`
-          })
+            fbmtoken: `fbm_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          }),
         });
         if (!loginRes.ok) throw new Error(`Login failed: ${await loginRes.text()}`);
         const loginBody = await loginRes.json();
@@ -106,7 +110,7 @@ async function main() {
     }
 
     if (preparedUsers.length === 0) {
-      console.error("❌ No users were prepared successfully. Exiting with failure.");
+      console.error('❌ No users were prepared successfully. Exiting with failure.');
       process.exit(1);
     }
 

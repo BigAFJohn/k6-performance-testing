@@ -1,11 +1,10 @@
-import http from 'k6/http';
-import { check } from 'k6'; 
-import { logInfo, logError } from '../../utils/logger.js';
+const http = require('k6/http');
+const { check } = require('k6');
+const { logInfo, logError } = require('../../utils/logger.js');
 
-
-// This function is designed to be called by a k6 VU 
-export function login(email, password) {
-  const BASE_URL = __ENV.BASE_URL; 
+// This function is designed to be called by a k6 VU
+function login(email, password) {
+  const BASE_URL = __ENV.BASE_URL;
 
   if (!email || !password) {
     logError('Login function called with missing email or password.');
@@ -16,7 +15,7 @@ export function login(email, password) {
   const loginPayload = {
     username: email,
     password: password,
-    fbmtoken: 'k6_fbmtoken_placeholder' 
+    fbmtoken: 'k6_fbmtoken_placeholder'
   };
 
   let loginRes;
@@ -63,3 +62,5 @@ export function login(email, password) {
   logInfo('Login successful, token received.');
   return token;
 }
+
+module.exports = { login };
