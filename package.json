@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "K6 load testing framework with Node.js user preparation",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start:prepare": "node prepareUsers.js",
     "start:k6": "k6 run test.js"
