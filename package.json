@@ -1,0 +1,27 @@
+{
+  "name": "kingdomportal-k6-framework",
+  "version": "1.0.0",
+  "description": "K6 load testing framework with Node.js user preparation",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start:prepare": "node prepareUsers.js",
+    "start:k6": "k6 run test.js"
+  },
+  "keywords": [
+    "k6",
+    "load-testing",
+    "nodejs",
+    "mysql",
+    "docker"
+  ],
+  "author": "John Ige",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.14.1"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^7.4.2"
+  }
+}

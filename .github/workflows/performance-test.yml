@@ -1,0 +1,66 @@
+name: K6 Performance Test
+
+on:
+  push:
+    branches:
+      - main 
+  pull_request:
+    branches:
+      - main 
+  workflow_dispatch: 
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' 
+
+      - name: Install Node.js dependencies for prepareUsers.js
+        run: npm install 
+
+      - name: Install dotenv-cli globally
+        run: npm install -g dotenv-cli 
+
+      - name: Create .env file from secrets
+        run: |
+          echo "DATABASE_HOST=${{ secrets.DATABASE_HOST }}" >> .env
+          echo "DATABASE_PORT=${{ secrets.DATABASE_PORT }}" >> .env
+          echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> .env
+          echo "DATABASE_USERNAME=${{ secrets.DATABASE_USERNAME }}" >> .env
+          echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
+          echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
+          cat .env # For debugging, remove in production if sensitive
+
+      - name: Bring up services and run k6 test
+        
+        run: docker-compose up --build --exit-code-from k6_runner
+        env:
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+          
+
+      - name: Clean up Docker Compose services
+        if: always() # Ensures this step runs even if previous steps fail
+        run: docker-compose down -v 
+
+      #Upload k6 test results as an artifact
+      - name: Upload k6 results JSON
+        uses: actions/upload-artifact@v4
+        if: success() || failure() 
+        with:
+          name: k6-results-json
+          path: k6_results.json 
+        
