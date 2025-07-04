@@ -1,15 +1,13 @@
 FROM node:20-alpine
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if you have one) to install Node.js dependencies
+# Copy and install Node dependencies
 COPY package*.json ./
-
-# Install Node.js dependencies
 RUN npm install
 
-# Install k6 (globally in the container, as it's an executable)
+# Install k6
 RUN apk add --no-cache curl \
     && curl -L https://github.com/grafana/k6/releases/download/v0.49.0/k6-v0.49.0-linux-arm64.tar.gz -o /tmp/k6.tar.gz \
     && mkdir -p /tmp/k6-extracted \
@@ -18,11 +16,14 @@ RUN apk add --no-cache curl \
     && chmod +x /usr/bin/k6 \
     && rm -rf /tmp/k6.tar.gz /tmp/k6-extracted
 
-# Install dotenv-cli globally for running shell scripts with .env files
+# Install dotenv-cli globally
 RUN npm install -g dotenv-cli
 
-# Copy the rest of application code into the container
+# Copy all project files
 COPY . .
 
-# execute shell script
+# Ensure run_full_test.sh has executable permissions
+RUN chmod +x /app/run_full_test.sh
+
+# Use the script as entrypoint
 ENTRYPOINT ["/bin/sh", "/app/run_full_test.sh"]

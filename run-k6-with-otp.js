@@ -24,7 +24,9 @@ if (!BASE_URL || !USER_PASSWORD || !DATABASE_HOST || !DATABASE_PORT || !DATABASE
   process.exit(1);
 }
 
-const NUM_USERS_TO_PREPARE = 100; // Adjust this number for k6 test needs
+console.log("✅ Environment variables loaded successfully.");
+
+const NUM_USERS_TO_PREPARE = 100; // Adjust this number as needed
 
 async function main() {
   let connection;
@@ -44,116 +46,76 @@ async function main() {
       const email = `user_loadtest_${Date.now()}_${i}@example.com`;
       console.log(`\n--- Preparing user ${i + 1}/${NUM_USERS_TO_PREPARE}: ${email} ---`);
 
-      // 1. Register User (using Node.js fetch)
-      console.log('Attempting user registration...');
-      const registerRes = await fetch(`${BASE_URL}/api/v1/user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: USER_PASSWORD })
-      });
+      try {
+        // Register user
+        const registerRes = await fetch(`${BASE_URL}/api/v1/user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: USER_PASSWORD })
+        });
+        if (!registerRes.ok) throw new Error(`Registration failed: ${await registerRes.text()}`);
+        console.log('✅ Registration successful.');
 
-      if (!registerRes.ok) {
-        console.error('❌ Registration failed:', await registerRes.text());
-        continue;
-      }
-      console.log('✅ Registration successful.');
-
-
-      // 3. Poll DB for OTP
-      let otp = null;
-      let attempts = 0;
-      const MAX_ATTEMPTS = 30;
-      const RETRY_DELAY = 500;
-
-      console.log(`Starting OTP polling loop for email: ${email}`);
-      while (attempts < MAX_ATTEMPTS && !otp) {
-        try {
+        // Poll for OTP
+        let otp = null, attempts = 0;
+        while (attempts < 30 && !otp) {
           const [rows] = await connection.query(
-            'SELECT otp, otp_date, email, status FROM user WHERE email = ? ORDER BY otp_date DESC LIMIT 1',
+            'SELECT otp FROM user WHERE email = ? ORDER BY otp_date DESC LIMIT 1',
             [email]
           );
-
           if (rows.length > 0 && rows[0].otp) {
             otp = rows[0].otp;
-            console.log(`✅ OTP retrieved on attempt ${attempts + 1}: ${otp}`);
-            break;
+            console.log(`✅ OTP retrieved: ${otp}`);
+          } else {
+            console.log(`⏳ Waiting for OTP (${attempts + 1}/30)`);
+            await new Promise(r => setTimeout(r, 500));
           }
-        } catch (err) {
-          console.error('❌ Error executing DB query:', err);
+          attempts++;
         }
+        if (!otp) throw new Error(`OTP not found for ${email}`);
 
-        if (!otp) {
-          console.log(`⏳ Attempt ${attempts + 1}: OTP not yet available. Retrying in ${RETRY_DELAY}ms.`);
-          await new Promise(r => setTimeout(r, RETRY_DELAY));
-        }
-        attempts++;
-      }
+        // Verify OTP
+        const otpVerifyRes = await fetch(`${BASE_URL}/api/v1/user/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, otp })
+        });
+        if (!otpVerifyRes.ok) throw new Error(`OTP verification failed: ${await otpVerifyRes.text()}`);
+        console.log('✅ OTP verification successful.');
 
-      if (!otp) {
-        console.error(`❌ OTP not found for ${email} after all attempts! Skipping user.`);
-        continue;
-      }
-      console.log(`✅ Final OTP retrieved: ${otp}`);
-
-      // 4. Verify OTP (using Node.js fetch)
-      console.log('Attempting OTP verification...');
-      const otpVerifyPayload = { email, otp };
-      const otpVerifyRes = await fetch(`${BASE_URL}/api/v1/user/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(otpVerifyPayload)
-      });
-
-      if (!otpVerifyRes.ok) {
-        console.error(`❌ OTP verification failed for ${email}: ${otpVerifyRes.status} - ${await otpVerifyRes.text()}`);
-        continue;
-      }
-      console.log('✅ OTP verification successful.');
-      await new Promise((r) => setTimeout(r, 1000));
-
-      // 5. Login User to get JWT Token (using Node.js fetch)
-      console.log('Attempting user login to get JWT token...');
-      const loginPayload = {
-        username: email,
-        password: USER_PASSWORD,
-        fbmtoken: 'test_fbmtoken_placeholder' // FIX: Provide a non-empty placeholder string for fbmtoken
-      };
-      const loginRes = await fetch(`${BASE_URL}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginPayload)
-      });
-
-      if (!loginRes.ok) {
-        console.error(`❌ Login failed for ${email}: ${loginRes.status} - ${await loginRes.text()}`);
-        continue;
-      }
-
-      let token = null;
-      try {
+        // Login to get JWT token
+        const loginRes = await fetch(`${BASE_URL}/api/v1/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: email,
+            password: USER_PASSWORD,
+            fbmtoken: `fbm_${Date.now()}_${Math.floor(Math.random() * 1000)}`
+          })
+        });
+        if (!loginRes.ok) throw new Error(`Login failed: ${await loginRes.text()}`);
         const loginBody = await loginRes.json();
-        token = loginBody.data.token;
+        const token = loginBody?.data?.token;
+        if (!token) throw new Error(`Token not found in login response.`);
+
+        preparedUsers.push({ email, password: USER_PASSWORD, token });
+        console.log(`✅ User ${email} prepared successfully.`);
       } catch (e) {
-        console.error(`❌ Failed to extract token from login response for ${email}:`, e);
-        continue;
+        console.error(`❌ Error preparing user ${email}:`, e.message);
       }
+    }
 
-      if (!token) {
-        console.error(`❌ Login successful for ${email}, but token is null/undefined.`);
-        continue;
-      }
-      console.log('✅ Login successful, token obtained.');
-
-      preparedUsers.push({ email, password: USER_PASSWORD, token });
-      console.log(`✅ User ${email} prepared successfully.`);
+    if (preparedUsers.length === 0) {
+      console.error("❌ No users were prepared successfully. Exiting with failure.");
+      process.exit(1);
     }
 
     const filePath = path.join(__dirname, 'prepared_users.json');
     fs.writeFileSync(filePath, JSON.stringify(preparedUsers, null, 2));
-    console.log(`\n🎉 Successfully prepared ${preparedUsers.length} users and saved to ${filePath}`);
-
+    console.log(`🎉 Successfully prepared ${preparedUsers.length} users and saved to ${filePath}`);
   } catch (err) {
-    console.error('❌ Fatal error in prepareUsers.js:', err);
+    console.error('❌ Fatal error:', err);
+    process.exit(1);
   } finally {
     if (connection) {
       await connection.end();
@@ -162,7 +124,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('❌ Unhandled error in main execution:', err);
+main().catch(err => {
+  console.error('❌ Unhandled error:', err);
   process.exit(1);
 });

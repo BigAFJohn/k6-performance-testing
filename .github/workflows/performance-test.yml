@@ -6,27 +6,27 @@ on:
       - main
   pull_request:
     branches:
-      - main 
-  workflow_dispatch: 
+      - main
+  workflow_dispatch:
 
 jobs:
   performance-test:
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' 
+          node-version: '20'
 
       - name: Install Node.js dependencies for prepareUsers.js
         run: npm install
 
       - name: Install dotenv-cli globally
-        run: npm install -g dotenv-cli 
+        run: npm install -g dotenv-cli
 
       - name: Create .env file from secrets
         run: |
@@ -37,12 +37,17 @@ jobs:
           echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
           echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
           echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
-          cat .env # For debugging, remove in production if sensitive
+
+      - name: List files for debug
+        run: ls -la
+
+      - name: Validate Docker Compose config
+        run: docker compose config
 
       - name: Install Docker Compose
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin # Install the Docker Compose plugin for Docker CLI
+          sudo apt-get install -y docker-compose-plugin
 
       - name: Bring up services and run k6 test
         run: docker compose up --build --exit-code-from k6_runner
@@ -54,6 +59,10 @@ jobs:
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           BASE_URL: ${{ secrets.BASE_URL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+
+      - name: Show k6_runner logs on failure
+        if: failure()
+        run: docker compose logs k6_runner
 
       - name: Clean up Docker Compose services
         if: always()
