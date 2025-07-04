@@ -37,10 +37,14 @@ jobs:
           echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
           echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
           echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
-          cat .env # For debugging, remove in production if sensitive
+          cat .env # For debugging
+
+      - name: Install Docker Compose 
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose-plugin # Install the Docker Compose plugin for Docker CLI
 
       - name: Bring up services and run k6 test
-        
         run: docker-compose up --build --exit-code-from k6_runner
         env:
           DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
@@ -50,17 +54,14 @@ jobs:
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           BASE_URL: ${{ secrets.BASE_URL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
-          
 
       - name: Clean up Docker Compose services
-        if: always() # Ensures this step runs even if previous steps fail
-        run: docker-compose down -v 
+        if: always()
+        run: docker-compose down -v
 
-      #Upload k6 test results as an artifact
       - name: Upload k6 results JSON
         uses: actions/upload-artifact@v4
-        if: success() || failure() 
+        if: success() || failure()
         with:
           name: k6-results-json
-          path: k6_results.json 
-        
+          path: k6_results.json
