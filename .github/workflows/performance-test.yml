@@ -25,9 +25,6 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
-      - name: Install dotenv-cli globally
-        run: npm install -g dotenv-cli
-
       - name: Create .env file from secrets
         run: |
           echo "DATABASE_HOST=${{ secrets.DATABASE_HOST }}" >> .env
@@ -38,17 +35,8 @@ jobs:
           echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env
           echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
 
-      - name: Check Docker Compose version
-        run: docker compose version
-
-      - name: Debug #List files in workspace
-        run: ls -la
-
-      - name: Debug #List files in /app before running
-        run: docker compose run --rm k6_runner ls -la /app
-
-      - name: Bring up services and run k6 test
-        run: docker compose up --build --exit-code-from k6_runner
+      - name: Prepare users
+        run: node run-k6-with-otp.js
         env:
           DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
           DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
@@ -57,6 +45,20 @@ jobs:
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           BASE_URL: ${{ secrets.BASE_URL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+
+      - name: Check Docker Compose version
+        run: docker compose version
+
+      - name: Debug - List files in workspace
+        run: ls -la
+
+      - name: Debug - List files in /app before running
+        run: docker compose run --rm k6_runner ls -la /app
+
+      - name: Bring up services and run k6 test
+        run: docker compose up --build --exit-code-from k6_runner
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
 
       - name: Show k6_runner logs on failure
         if: failure()
