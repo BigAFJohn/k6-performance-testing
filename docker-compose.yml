@@ -29,7 +29,7 @@ services:
     image: grafana/k6:latest
     depends_on:
       - influxdb
-    command: ["run", "--out", "influxdb=http://influxdb:8086/k6", "--out", "json=k6_results.json", "test.js"]
+    command: ["run", "--out", "influxdb=http://influxdb:8086/k6", "test.js"]
     environment:
       - BASE_URL=${BASE_URL}
     volumes:
